@@ -1,0 +1,12 @@
+#################  
+## npm
+#################
+
+npm-debug.log
+node_modules/
+!/node_modules/
+!src/node_modules/
+/node_modules/*/node-modules/ 
+node_modules
+words_alpha.txt
+package-lock.json

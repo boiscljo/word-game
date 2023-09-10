@@ -1,0 +1,239 @@
+<html>
+
+<head>
+    <title>LinkOfTheWolves' WordsOnStream</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <h1 id="letters"></h1>
+    <progress id="time" max="240" value="70"></progress>
+    <div class="columns">
+        <div class="column" id="col1"></div>
+        <div class="column" id="col2"></div>
+        <div class="column" id="col3"></div>
+    </div>
+    <script>
+
+        window.gameState = {};
+        function setGameUI() {
+            let letters = window.gameState.letters;
+            let columns = $(".column");
+
+            if (letters) {
+                let letterBox = $("#letters");
+                letterBox.children().remove();
+                if (window.gameState.state == "game") {
+                    letters.split('').forEach(l => {
+                        var lbox = $("<span>").text(l);
+                        letterBox.append(lbox);
+                    });
+                    $("#time").val(window.gameState.time_remaining);
+                    $("#time").attr("max", window.gameState.game_duration);
+                }
+                else {
+                    "game over".split('').forEach(l => {
+                        var lbox = $("<span>").text(l);
+                        letterBox.append(lbox);
+                    });
+                }
+            }
+
+            let words = window.gameState.words;
+            if (words) {
+                columns.children().remove();
+                $("#time").show();
+                if (window.gameState.state == "game") {
+                    var perColumn = words.length / 3;
+                    words.sort((a, b) => a.word.length - b.word.length);
+
+                    for (var i = 0; i < words.length; i++) {
+                        let word = words[i];
+                        let columnIdx = parseInt(i / perColumn);
+
+                        var col = $(columns[columnIdx]);
+
+                        var wordElement = $("<div>").addClass("word");
+
+                        col.append(wordElement);
+
+                        word.word.split('').forEach(l => {
+                            var lbox = $("<span>").addClass("letter");
+                            if (word.author) lbox.text(l);
+                            wordElement.append(lbox);
+                        });
+
+                        if (word.author) {
+                            wordElement.addClass("completed")
+                            var lbox = $("<span>").addClass("badge");
+                            lbox.text(word.author);
+                            var lbox2 = $("<span>").addClass("badge-number");
+                            lbox2.text(word.points);
+                            lbox.append(lbox2);
+                            wordElement.append(lbox);
+                        }
+
+                    }
+                }
+                else {
+                    $("#time").hide();
+                    let leaderboard = window.gameState.leaderboard;
+                    leaderboard = Object.keys(leaderboard.scores).map(key => {
+                        return { username: key, score: window.gameState.leaderboard.scores[key] };
+                    });
+                    leaderboard = leaderboard.sort((a, b) => b.score - a.score);
+                    console.log(leaderboard);
+
+                    perColumn = parseInt(leaderboard.length / 3)
+                    if (perColumn > 5)
+                        perColumn = 5;
+
+                    for (var i = 0; i < leaderboard.length && i < 15; i++) {
+                        let columnIdx = parseInt(i / perColumn);
+
+                        var col = $(columns[columnIdx]);
+
+                        var wordElement = $("<div>").addClass("word");
+
+                        col.append(wordElement);
+                        var word = leaderboard[i]
+
+                        word.username.split('').forEach(l => {
+                            var lbox = $("<span>").addClass("letter");
+                            lbox.text(l);
+                            wordElement.append(lbox);
+                        });
+
+                        wordElement.addClass("completed")
+                        var lbox = $("<span>").addClass("badge");
+                        lbox.text(word.score);
+                        wordElement.append(lbox);
+                    }
+                }
+            }
+        }
+        function getUpdate() {
+            const httpRequest = new XMLHttpRequest();
+            httpRequest.onreadystatechange = () => {
+                if (httpRequest.readyState === XMLHttpRequest.DONE) {
+                    if (httpRequest.status === 200) {
+                        window.gameState = JSON.parse(httpRequest.responseText);
+                        setGameUI();
+                    } else {
+
+                    }
+                    setTimeout(getUpdate, 500);
+                }
+            };
+            httpRequest.open("GET", "/state", true);
+            httpRequest.send();
+        }
+        getUpdate();
+    </script>
+    <style>
+        body {
+            background-color: #8248f3;
+        }
+
+        #letters {
+            text-align: center;
+        }
+
+        #letters span {
+            border: 1px solid #461257;
+            display: inline-block;
+            text-align: center;
+            display: inline-grid;
+            align-items: center;
+            vertical-align: middle;
+            padding: auto;
+            width: 96px;
+            height: 96px;
+            margin: 10px;
+            border-radius: 15px;
+            background-color: #d7a1f9;
+            color: #461257;
+            align-items: center;
+            text-transform: capitalize;
+
+        }
+
+        .word.completed {
+            border: 1px solid #461257;
+            background-color: #6337b9;
+        }
+
+        .word .letter {
+            border: 1px solid #461257;
+            display: inline-grid;
+            align-items: center;
+            text-align: center;
+            vertical-align: middle;
+            width: 32px;
+            height: 32px;
+            background-color: #d7a1f9;
+            margin: 5px;
+            text-transform: capitalize;
+            border-radius: 5px;
+        }
+
+        .word .letter:not(:empty) {
+            background-color: #6a169e;
+            color: white;
+        }
+
+        .word .badge:not(:empty) {
+            border: 1px solid #461257;
+            border-radius: 16px;
+            height: 32px;
+            background-color: yellow;
+            padding: 4px;
+            color: #461257;
+        }
+
+        .word .badge-number:not(:empty) {
+            border: 1px solid #461257;
+            border-radius: 0 16px 16px 0;
+            height: 32px;
+            background-color: purple;
+            padding: 4px;
+            color: white;
+            margin-right: -5px;
+            margin-left: 5px
+        }
+
+        progress {
+            width: 100%;
+            height: 48px;
+            border-right: 5px;
+        }
+
+        .columns {
+            box-sizing: border-box;
+        }
+
+        .column {
+            box-sizing: border-box;
+            display: inline-block;
+            width: 30%;
+            overflow-x: hidden;
+        }
+
+        progress::-webkit-progress-value {
+            background-image:
+                -webkit-linear-gradient(-45deg,
+                    transparent 33%, rgba(0, 0, 0, .1) 33%,
+                    rgba(0, 0, 0, .1) 66%, transparent 66%),
+                -webkit-linear-gradient(top,
+                    rgba(255, 255, 255, .25),
+                    rgba(0, 0, 0, .25)),
+                -webkit-linear-gradient(left, #09c, #f44);
+
+            border-radius: 2px;
+            background-size: 35px 20px, 100% 100%, 100% 100%;
+        }
+    </style>
+</body>
+
+</html>
